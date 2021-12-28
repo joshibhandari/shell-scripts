@@ -67,3 +67,72 @@ if [[ ${status} = "False" ]]; then
       exit 1
     fi
 fi
+
+#checking package is available
+#!/bin/bash
+check_package () {
+    pkg_arry=(perl python flex bison)
+    echo "List of applications installed or not: ${pkg_arry[*]}"
+    for binary in ${pkg_arry[@]}; do
+        if which $binary 1>/dev/null; then
+            echo "$binary --> installed"
+        else
+            echo "$binary --> not installed"
+            if [[ $OS == RHEL ]]; then
+                   yum install $binary
+            elif [[ $OS == UBUNTU ]]; then
+                   sudo apt-get install $binary -y
+            elif [[ $OS == ALPINE ]]; then
+                   apk add $binary
+            else
+                    echo "Failed to install"
+            fi
+
+
+        fi
+    done
+    echo "OS Version Information"
+    egrep '^(VERSION|NAME)=' /etc/os-release
+}
+
+
+if [[ `which yum` ]]; then
+   IS_RHEL=1
+   echo "RHEL"
+   OS=RHEL
+   check_package
+elif [[ `which apt` ]]; then
+   IS_UBUNTU=1
+   echo "UBUNTU"
+   OS=UBUNTU
+   check_package
+elif [[ `which apk` ]]; then
+   IS_ALPINE=1
+   echo "ALPINE"
+   OS=ALPINE
+   check_package
+else
+   IS_UNKNOWN=1
+fi
+
+#server check
+#!/bin/bash
+read -r ip_addr
+if nc -z $ip_addr 22; then
+    echo "Ping successfully for IP address: $ip_addr"
+else
+    echo "Ping failed for IP address: $ip_addr"
+fi
+
+#Host Validation /etc/hosts
+#!/bin/bash
+ip_addr=$(sed -nE 's/(.*[^0-9]|)([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+).*/\2/p' /etc/hosts | uniq | grep -vE "127.0.0.1")
+
+for ip in $ip_addr; do
+  if nc -z $ip 22 1>/dev/null ; then
+    echo "Ping successfully for IP address: $ip"
+  else
+    echo "Ping failed for IP address: $ip"
+  fi
+done
+

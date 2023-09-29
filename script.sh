@@ -136,3 +136,22 @@ for ip in $ip_addr; do
   fi
 done
 
+#to send logs into slack
+#!/bin/bash
+SLACK_BOT_TOKEN="xoxb-5967738064866-5964920924149-XoZjtOAXOZDx7OIqC2PiRIvx"
+CHANNEL_NAME="#devops"
+
+slack_not () {
+        INFO=$1
+        STAT=$2
+        curl -X POST -H "Authorization: Bearer $SLACK_BOT_TOKEN" -H 'Content-type: application/json' --data "{\"channel\":\"$CHANNEL_NAME\", \"text\":\"$STAT\n$INFO\"}" "https://slack.com/api/chat.postMessage"
+}
+
+
+VAL=$(cat /var/log/auth.log 2>/dev/null)
+USER=$(echo "$VAL" | grep "Accepted publickey" | awk 'END{ print }')
+LOG=$(echo "$USER" |  awk -F":" '{print $1, $2, $3, $4}' )
+ACT=$(echo "$LOG" | awk 'NR == 1 {$NF = ""} 1' )
+slack_not "$ACT" "SSH Login detected"
+CONN_CLOSED=$(echo "$VAL" | grep "Invalid user" | awk 'END{ print }')
+slack_not "$CONN_CLOSED" "SSH Logout"
